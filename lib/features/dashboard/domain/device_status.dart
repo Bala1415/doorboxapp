@@ -8,6 +8,9 @@ class DeviceStatus {
   final bool motionDetected;
   final String internalCameraUrl;
   final String externalCameraUrl;
+  final String packageState;
+  final DateTime? lastUpdated;
+  final String? latestCameraImageBase64;
 
   const DeviceStatus({
     required this.name,
@@ -19,6 +22,9 @@ class DeviceStatus {
     required this.motionDetected,
     required this.internalCameraUrl,
     required this.externalCameraUrl,
+    required this.packageState,
+    this.lastUpdated,
+    this.latestCameraImageBase64,
   });
 
   DeviceStatus copyWith({
@@ -31,6 +37,9 @@ class DeviceStatus {
     bool? motionDetected,
     String? internalCameraUrl,
     String? externalCameraUrl,
+    String? packageState,
+    DateTime? lastUpdated,
+    String? latestCameraImageBase64,
   }) {
     return DeviceStatus(
       name: name ?? this.name,
@@ -42,6 +51,9 @@ class DeviceStatus {
       motionDetected: motionDetected ?? this.motionDetected,
       internalCameraUrl: internalCameraUrl ?? this.internalCameraUrl,
       externalCameraUrl: externalCameraUrl ?? this.externalCameraUrl,
+      packageState: packageState ?? this.packageState,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+      latestCameraImageBase64: latestCameraImageBase64 ?? this.latestCameraImageBase64,
     );
   }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../../../../core/providers/mock_providers.dart';
+import 'dart:convert';
+import 'package:intl/intl.dart';
+import '../providers/device_status_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/stat_card.dart';
@@ -115,11 +117,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
 
             // Large Circular Unlock Button
             GestureDetector(
-              onTap: () {
-                // Toggle lock state logic (mock)
-                ref.read(deviceStatusProvider.notifier).state = deviceState.copyWith(
-                  isLocked: !deviceState.isLocked,
-                );
+              onTap: () async {
+                // Call real unlock API
+                final success = await ref.read(deviceStatusProvider.notifier).unlockBox("box123");
+                if (success && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Unlock command sent successfully!')),
+                  );
+                }
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
@@ -166,27 +171,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
               physics: const NeverScrollableScrollPhysics(),
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
-              childAspectRatio: 1.5,
+              childAspectRatio: 1.2,
               children: [
                 StatCard(
                   icon: LucideIcons.wifi,
                   title: '${deviceState.wifiStrength}%',
                   subtitle: '',
-                  customContent: Column(
+                  customContent: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Spacer(),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${deviceState.wifiStrength}%',
-                              style: Theme.of(context).textTheme.headlineLarge,
-                            ),
-                          ),
-                          const Icon(LucideIcons.wifi, color: AppColors.primary, size: 28),
-                        ],
+                      Expanded(
+                        child: Text(
+                          '${deviceState.wifiStrength}%',
+                          style: Theme.of(context).textTheme.headlineLarge,
+                        ),
                       ),
+                      const Icon(LucideIcons.wifi, color: AppColors.primary, size: 28),
                     ],
                   ),
                 ),
@@ -194,21 +194,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                   icon: LucideIcons.battery,
                   title: '${deviceState.batteryLevel}%',
                   subtitle: '',
-                  customContent: Column(
+                  customContent: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Spacer(),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${deviceState.batteryLevel}%',
-                              style: Theme.of(context).textTheme.headlineLarge,
-                            ),
-                          ),
-                          const Icon(LucideIcons.batteryMedium, color: AppColors.success, size: 28),
-                        ],
+                      Expanded(
+                        child: Text(
+                          '${deviceState.batteryLevel}%',
+                          style: Theme.of(context).textTheme.headlineLarge,
+                        ),
                       ),
+                      const Icon(LucideIcons.batteryMedium, color: AppColors.success, size: 28),
                     ],
                   ),
                 ),
@@ -217,6 +212,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                   title: '${deviceState.temperature}°F',
                   valueColor: AppColors.error,
                   subtitle: '',
+                ),
+                StatCard(
+                  icon: LucideIcons.package,
+                  title: deviceState.packageState,
+                  valueColor: deviceState.packageState == 'Delivered' ? AppColors.success : AppColors.textPrimary,
+                  subtitle: 'Package Status',
                 ),
                 StatCard(
                   icon: LucideIcons.activity,
@@ -283,17 +284,32 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                     borderRadius: BorderRadius.circular(16),
                     child: Stack(
                       children: [
-                        Image.network(
-                          _isInternalCamera ? deviceState.internalCameraUrl : deviceState.externalCameraUrl,
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
+                        if (deviceState.latestCameraImageBase64 != null && deviceState.latestCameraImageBase64!.isNotEmpty) 
+                          Image.memory(
+                            base64Decode(deviceState.latestCameraImageBase64!.contains(',')
+                                ? deviceState.latestCameraImageBase64!.split(',').last
+                                : deviceState.latestCameraImageBase64!),
                             height: 200,
-                            color: Colors.grey.shade300,
-                            child: const Center(child: Icon(LucideIcons.cameraOff, size: 48, color: Colors.grey)),
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              height: 200,
+                              color: Colors.grey.shade300,
+                              child: const Center(child: Icon(LucideIcons.cameraOff, size: 48, color: Colors.grey)),
+                            ),
+                          )
+                        else
+                          Image.network(
+                            _isInternalCamera ? deviceState.internalCameraUrl : deviceState.externalCameraUrl,
+                            height: 200,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              height: 200,
+                              color: Colors.grey.shade300,
+                              child: const Center(child: Icon(LucideIcons.cameraOff, size: 48, color: Colors.grey)),
+                            ),
                           ),
-                        ),
                         Positioned(
                           top: 8,
                           right: 8,
@@ -303,7 +319,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                               color: Colors.black54,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Text('Jan 11, 2026 01:48:08 PM', style: TextStyle(color: Colors.white, fontSize: 10)),
+                            child: Text(
+                              deviceState.lastUpdated != null 
+                                  ? DateFormat('MMM dd, yyyy hh:mm:ss a').format(deviceState.lastUpdated!)
+                                  : 'Waiting for update...', 
+                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                            ),
                           ),
                         ),
                       ],

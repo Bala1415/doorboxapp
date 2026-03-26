@@ -1,22 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../features/dashboard/domain/device_status.dart';
 import '../../features/activity/domain/activity_log.dart';
 import '../../features/settings/domain/box_settings.dart';
 
-// Dashboard / Device Status Provider
-final deviceStatusProvider = StateProvider<DeviceStatus>((ref) {
-  return const DeviceStatus(
-    name: "Front Porch Box",
-    isOnline: true,
-    isLocked: true,
-    wifiStrength: 75,
-    batteryLevel: 85,
-    temperature: 83.3,
-    motionDetected: false,
-    internalCameraUrl: "https://via.placeholder.com/600x400.png?text=Internal+Camera",
-    externalCameraUrl: "https://via.placeholder.com/600x400.png?text=External+Camera",
-  );
-});
+// Removed DeviceStatusProvider mock
 
 // Activity Logs Provider
 final activityLogsProvider = Provider<List<ActivityLog>>((ref) {
