@@ -9,8 +9,11 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/stat_card.dart';
 import '../../../../core/widgets/primary_button.dart';
 
+import '../../../../core/services/socket_service.dart';
+
 class DashboardScreen extends ConsumerStatefulWidget {
-  const DashboardScreen({super.key});
+  final String hardwareId;
+  const DashboardScreen({super.key, required this.hardwareId});
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
@@ -22,8 +25,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
   late Animation<double> _pulseAnimation;
 
   @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  void _initSocket() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(socketServiceProvider).connect(widget.hardwareId);
+    });
+  }
+
+  @override
   void initState() {
     super.initState();
+    _initSocket();
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -32,12 +48,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
   }
 
   @override
@@ -119,7 +129,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             GestureDetector(
               onTap: () async {
                 // Call real unlock API
-                final success = await ref.read(deviceStatusProvider.notifier).unlockBox("box123");
+                final success = await ref.read(deviceStatusProvider.notifier).unlockBox(widget.hardwareId);
                 if (success && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Unlock command sent successfully!')),

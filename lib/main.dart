@@ -7,16 +7,18 @@ void main() {
   runApp(const ProviderScope(child: DoorBoxApp()));
 }
 
-class DoorBoxApp extends StatelessWidget {
+class DoorBoxApp extends ConsumerWidget {
   const DoorBoxApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(goRouterProvider);
     return MaterialApp.router(
       title: 'DoorBox',
       theme: AppTheme.lightTheme,
-      routerConfig: appRouter,
+      routerConfig: router,
       debugShowCheckedModeBanner: false,
     );
   }
 }
+

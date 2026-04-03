@@ -14,31 +14,41 @@ final socketServiceProvider = Provider<SocketService>((ref) {
 class SocketService {
   late io.Socket _socket;
   // Updated with actual backend IP
-  static const String baseUrl = 'http://34.47.214.219:3000';
+  static const String baseUrl = 'http://34.14.171.122:3000';
 
-  final _boxUpdateController = StreamController<Map<String, dynamic>>.broadcast();
-  Stream<Map<String, dynamic>> get boxUpdateStream => _boxUpdateController.stream;
+  final _boxUpdateController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get boxUpdateStream =>
+      _boxUpdateController.stream;
 
   final _connectionStateController = StreamController<bool>.broadcast();
   Stream<bool> get connectionStateStream => _connectionStateController.stream;
+
+  String? _currentHardwareId;
 
   SocketService() {
     _initSocket();
   }
 
   void _initSocket() {
-    _socket = io.io(baseUrl, io.OptionBuilder()
-      // Allow fallback to polling if websockets are blocked by server/firewall
-      .setTransports(['websocket', 'polling']) 
-      .enableAutoConnect()
-      .enableReconnection()
-      .build());
+    _socket = io.io(
+        baseUrl,
+        io.OptionBuilder()
+            // Use pure websocket to avoid timeout issues during polling handshakes
+            .setTransports(['websocket'])
+            .enableAutoConnect()
+            .enableReconnection()
+            .build());
 
     // Explicitly connect to ensure it fires off immediately
     _socket.connect();
 
     _socket.onConnect((_) {
       debugPrint('Socket connected');
+      if (_currentHardwareId != null) {
+        _socket.emit('join-box', _currentHardwareId);
+        debugPrint('Joined box: $_currentHardwareId');
+      }
       _connectionStateController.add(true);
     });
 
@@ -60,9 +70,13 @@ class SocketService {
     });
   }
 
-  void connect() {
+  void connect(String hardwareId) {
+    _currentHardwareId = hardwareId;
     if (!_socket.connected) {
       _socket.connect();
+    } else {
+      _socket.emit('join-box', hardwareId);
+      debugPrint('Joined box: $hardwareId');
     }
   }
 
