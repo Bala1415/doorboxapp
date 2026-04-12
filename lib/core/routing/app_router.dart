@@ -58,6 +58,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         },
         routes: <RouteBase>[
           GoRoute(
+            path: '/home',
+            redirect: (context, state) => '/devices',
+          ),
+          GoRoute(
             path: '/devices',
             builder: (BuildContext context, GoRouterState state) => const MyDevicesScreen(),
           ),

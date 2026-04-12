@@ -79,7 +79,7 @@ class MainScreen extends StatelessWidget {
         context.go('/activity');
         break;
       case 2:
-        context.go('/settings');
+        context.go('/devices');
         break;
       case 3:
         context.go('/profile');

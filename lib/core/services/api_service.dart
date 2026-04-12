@@ -10,7 +10,7 @@ class ApiService {
   final Dio _dio;
   
   // Updated with actual backend IP
-  static const String baseUrl = 'http://34.14.171.122:3000';
+  static const String baseUrl = 'http://34.93.119.123:3000';
 
   ApiService() : _dio = Dio(BaseOptions(
     baseUrl: baseUrl,

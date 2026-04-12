@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
 import '../../../core/services/socket_service.dart';
 import '../../../core/services/api_service.dart';
 import '../domain/device_status.dart';
@@ -23,7 +24,7 @@ class DeviceStatusNotifier extends StateNotifier<DeviceStatus> {
             isLocked: true,
             wifiStrength: 0,
             batteryLevel: 0,
-            temperature: 72.0, // Default mock value
+            temperature: 0.0, // Default mock value
             motionDetected: false,
             internalCameraUrl:
                 "https://via.placeholder.com/600x400.png?text=Internal+Camera",
@@ -48,9 +49,37 @@ class DeviceStatusNotifier extends StateNotifier<DeviceStatus> {
       if (!mounted) return;
 
       // The backend wraps everything in a "data" property: { hardwareId, data: {...} }
-      final actualData = payload['data'] as Map<String, dynamic>? ?? payload;
+      Map<String, dynamic> actualData = payload;
+      if (payload['data'] != null) {
+        if (payload['data'] is Map) {
+          actualData = Map<String, dynamic>.from(payload['data']);
+        } else if (payload['data'] is String) {
+          try {
+            final decoded = jsonDecode(payload['data']);
+            if (decoded is Map) {
+              actualData = Map<String, dynamic>.from(decoded);
+            }
+          } catch (e) {
+            // keep actualData as payload
+          }
+        }
+      }
 
-      final hwMsg = actualData['hardwaremessage'] as Map<String, dynamic>?;
+      var hwMsgRaw = actualData['hardwaremessage'];
+      if (hwMsgRaw is String) {
+        try {
+          var decodedHwMsg = jsonDecode(hwMsgRaw);
+          if (decodedHwMsg is Map) {
+            hwMsgRaw = decodedHwMsg;
+          }
+        } catch (_) {}
+      }
+
+      Map<String, dynamic>? hwMsg;
+      if (hwMsgRaw is Map) {
+        hwMsg = Map<String, dynamic>.from(hwMsgRaw);
+      }
+
       final photovideo = actualData['photovideo'] as String?;
 
       int parseIntSafe(dynamic value, int fallback) {
@@ -62,10 +91,19 @@ class DeviceStatusNotifier extends StateNotifier<DeviceStatus> {
         return fallback;
       }
 
+      double parseDoubleSafe(dynamic value, double fallback) {
+        if (value is num) return value.toDouble();
+        if (value is String) {
+          final s = value.replaceAll(RegExp(r'[^0-9.]'), '');
+          return double.tryParse(s) ?? fallback;
+        }
+        return fallback;
+      }
+
       if (hwMsg != null) {
         final rawLock = hwMsg['boxstate'];
-        final isLocked =
-            (rawLock == '1' || rawLock == 1 || rawLock == 'Locked');
+        final isLocked = !(rawLock == '1' || rawLock == 1);
+        
         int wifiStrength = state.wifiStrength;
         final wifiRaw = hwMsg['wifi'];
 
@@ -73,21 +111,26 @@ class DeviceStatusNotifier extends StateNotifier<DeviceStatus> {
           final wifiLower = wifiRaw.toLowerCase();
           if (wifiLower == "strong") {
             wifiStrength = 100;
-          } else if (wifiLower == "medium")
+          } else if (wifiLower == "medium") {
             wifiStrength = 60;
-          else if (wifiLower == "weak")
+          } else if (wifiLower == "weak") {
             wifiStrength = 30;
-          else
+          } else {
             wifiStrength = parseIntSafe(wifiRaw, state.wifiStrength);
+          }
         } else if (wifiRaw != null) {
           wifiStrength = parseIntSafe(wifiRaw, state.wifiStrength);
         }
+
+        final packageRaw = hwMsg['package'];
+        final packageText = (packageRaw?.toString() == "1") ? "Delivered" : "Empty";
 
         state = state.copyWith(
           batteryLevel: parseIntSafe(hwMsg['battery'], state.batteryLevel),
           wifiStrength: wifiStrength,
           isLocked: isLocked,
-          packageState: hwMsg['packagestate']?.toString() ?? state.packageState,
+          packageState: packageText,
+          temperature: parseDoubleSafe(hwMsg['temperature'], state.temperature),
           lastUpdated: DateTime.now(),
         );
       }
